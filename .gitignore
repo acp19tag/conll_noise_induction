@@ -1,0 +1,8 @@
+# Word Embeddings
+data/glove.6B/*
+
+# Pycache 
+*.pyc
+
+# Model Weights
+*.h5
