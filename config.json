@@ -1,0 +1,9 @@
+{
+    "NUM_RUNS": 30,
+    "DATA_PATH": "data/ner-mturk/",
+    "EMBEDDING_DIM": 300,
+    "BATCH_SIZE": 64,
+    "PRETRAIN_EPOCHS": 5,
+    "TRAIN_EPOCHS": 30,
+    "NOISE_INCREMENTS": 50
+}
