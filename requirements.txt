@@ -1,0 +1,6 @@
+numpy==1.17.2
+pandas==0.25.1
+Keras==2.2.4
+tqdm==4.36.1
+tensorflow==1.15.0
+scikit_learn==1.0
