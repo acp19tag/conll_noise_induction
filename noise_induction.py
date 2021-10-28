@@ -195,9 +195,13 @@ class NoiseInductor():
 
         first_time = True
 
-        for i in tqdm(range(self.config["NOISE_INCREMENTS"])):
+        noise_prop_list = [np.round(x, 2) for x in np.arange(
+            self.config["MIN_NOISE_PROP"],
+            self.config["MAX_NOISE_PROP"] + self.config["INC_NOISE_PROP"],
+            self.config["INC_NOISE_PROP"]
+        )]
 
-            noise_prop = float(i)/self.config["NOISE_INCREMENTS"]
+        for noise_prop in tqdm(noise_prop_list):
 
             # add noise
             y_answers_noised = add_noise(
@@ -299,105 +303,109 @@ class NoiseInductor():
 
         first_time = True
 
-        for i in tqdm(range(self.config["NOISE_INCREMENTS"])):
-            denoise_prop = float(i)/self.config["NOISE_INCREMENTS"]
-            if denoise_prop > 0.3:
+        denoise_prop_list = [np.round(x, 2) for x in np.arange(
+            self.config["MIN_NOISE_PROP"],
+            self.config["MAX_NOISE_PROP"] + self.config["INC_NOISE_PROP"],
+            self.config["INC_NOISE_PROP"]
+        )]
 
-                # add de-noise
-                y_answers_denoised = de_noise(
-                    self.data["y_answers"], 
-                    denoise_prop, 
-                    self.data["labels_without_o"], 
-                    self.data["y_ground_truth"]
+        for denoise_prop in tqdm(denoise_prop_list):
+
+            # add de-noise
+            y_answers_denoised = de_noise(
+                self.data["y_answers"], 
+                denoise_prop, 
+                self.data["labels_without_o"], 
+                self.data["y_ground_truth"]
+                )
+
+            answers_dict_denoised = generate_answers_dict(
+                y_answers_denoised, 
+                self.data["y_ground_truth"]
+                )
+
+            f1_dict_denoised = generate_f1_dict(
+                answers_dict_denoised, 
+                self.data["labels"], 
+                self.data["labels_without_o"]
+                )
+            mean_f1 = find_mean_f1(f1_dict_denoised)
+            std_f1 = find_std_f1(f1_dict_denoised)
+
+            y_answers_denoised_enc = onehot_encode_y_answers(
+                y_answers_denoised, 
+                self.data["maxlen"], 
+                self.data["label2ind"]
+                )
+            y_mv_denoised = get_majority_label(y_answers_denoised)
+            y_mv_denoised_enc = onehot_encode_y(
+                y_mv_denoised, 
+                self.data["maxlen"], 
+                self.data["label2ind"]
+                )
+
+            model = self.build_base_model()
+
+            # pre-train base model for a few iterations using the output of majority voting
+            model.fit(
+                self.data["X_train_enc"], 
+                y_mv_denoised_enc, 
+                batch_size=self.config["BATCH_SIZE"], 
+                epochs=self.config["PRETRAIN_EPOCHS"], 
+                verbose=0
+                ) 
+
+            # add crowds layer on top of the base model
+            model.add(
+                CrowdsClassification(
+                    self.data["N_CLASSES"], 
+                    self.data["N_ANNOT"], 
+                    conn_type="MW"
                     )
+                )
 
-                answers_dict_denoised = generate_answers_dict(
-                    y_answers_denoised, 
-                    self.data["y_ground_truth"]
-                    )
+            # instantiate specialized masked loss to handle missing answers
+            loss = MaskedMultiSequenceCrossEntropy(self.data["N_CLASSES"]).loss
 
-                f1_dict_denoised = generate_f1_dict(
-                    answers_dict_denoised, 
-                    self.data["labels"], 
-                    self.data["labels_without_o"]
-                    )
-                mean_f1 = find_mean_f1(f1_dict_denoised)
-                std_f1 = find_std_f1(f1_dict_denoised)
+            # compile model with masked loss and train
+            model.compile(optimizer='adam', loss=loss)
+            model.fit(
+                self.data["X_train_enc"], 
+                y_answers_denoised_enc, 
+                batch_size=self.config["BATCH_SIZE"], 
+                epochs=self.config["TRAIN_EPOCHS"], 
+                verbose=0
+                ) 
 
-                y_answers_denoised_enc = onehot_encode_y_answers(
-                    y_answers_denoised, 
-                    self.data["maxlen"], 
-                    self.data["label2ind"]
-                    )
-                y_mv_denoised = get_majority_label(y_answers_denoised)
-                y_mv_denoised_enc = onehot_encode_y(
-                    y_mv_denoised, 
-                    self.data["maxlen"], 
-                    self.data["label2ind"]
-                    )
+            model.pop()
 
-                model = self.build_base_model()
+            model.compile(
+                optimizer='adam', 
+                loss='categorical_crossentropy', 
+                metrics=['accuracy']
+                )
 
-                # pre-train base model for a few iterations using the output of majority voting
-                model.fit(
-                    self.data["X_train_enc"], 
-                    y_mv_denoised_enc, 
-                    batch_size=self.config["BATCH_SIZE"], 
-                    epochs=self.config["PRETRAIN_EPOCHS"], 
-                    verbose=0
-                    ) 
+            test_accuracy, model_precision, model_recall, model_f1 = self.eval_model(model)
 
-                # add crowds layer on top of the base model
-                model.add(
-                    CrowdsClassification(
-                        self.data["N_CLASSES"], 
-                        self.data["N_ANNOT"], 
-                        conn_type="MW"
-                        )
-                    )
-
-                # instantiate specialized masked loss to handle missing answers
-                loss = MaskedMultiSequenceCrossEntropy(self.data["N_CLASSES"]).loss
-
-                # compile model with masked loss and train
-                model.compile(optimizer='adam', loss=loss)
-                model.fit(
-                    self.data["X_train_enc"], 
-                    y_answers_denoised_enc, 
-                    batch_size=self.config["BATCH_SIZE"], 
-                    epochs=self.config["TRAIN_EPOCHS"], 
-                    verbose=0
-                    ) 
-
-                model.pop()
-
-                model.compile(
-                    optimizer='adam', 
-                    loss='categorical_crossentropy', 
-                    metrics=['accuracy']
-                    )
-
-                test_accuracy, model_precision, model_recall, model_f1 = self.eval_model(model)
-
-                df = pd.DataFrame(
+            df = pd.DataFrame(
+                [
                     [
-                        [
-                            denoise_prop, 
-                            mean_f1, 
-                            std_f1, 
-                            test_accuracy, 
-                            model_precision, 
-                            model_recall, 
-                            model_f1
-                            ]
-                        ], 
-                        columns=self.headers
-                    )
+                        denoise_prop, 
+                        mean_f1, 
+                        std_f1, 
+                        test_accuracy, 
+                        model_precision, 
+                        model_recall, 
+                        model_f1
+                        ]
+                    ], 
+                    columns=self.headers
+                )
 
-                if first_time:
-                    df.to_csv(output_dir, index=False, header=True)
-                    first_time = False
-                else:
-                    existing_df = pd.read_csv(output_dir)
-                    existing_df = existing_df.append(df, ignore_index = True)
-                    existing_df.to_csv(output_dir, index=False, header=True)
+            if first_time:
+                df.to_csv(output_dir, index=False, header=True)
+                first_time = False
+            else:
+                existing_df = pd.read_csv(output_dir)
+                existing_df = existing_df.append(df, ignore_index = True)
+                existing_df.to_csv(output_dir, index=False, header=True)

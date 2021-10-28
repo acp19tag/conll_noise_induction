@@ -2,9 +2,11 @@
     "DATA_PATH": "data/ner-mturk/",
     "EMBEDDING_DIM": 300,
     "BATCH_SIZE": 64, 
-    "PRETRAIN_EPOCHS": 2,
-    "TRAIN_EPOCHS": 2,
-    "NOISE_INCREMENTS": 2,
+    "PRETRAIN_EPOCHS": 5,
+    "TRAIN_EPOCHS": 30,
+    "MIN_NOISE_PROP": 0.00,
+    "MAX_NOISE_PROP": 0.30,
+    "INC_NOISE_PROP": 0.02,
     "NUM_REPEATS": 1,
     "DEFAULT_SETTINGS": {
         "DATA_PATH": "data/ner-mturk/",
@@ -12,7 +14,9 @@
         "BATCH_SIZE": 64, 
         "PRETRAIN_EPOCHS": 5,
         "TRAIN_EPOCHS": 30,
-        "NOISE_INCREMENTS": 50,
-        "NUM_REPEATS": 3
+        "MIN_NOISE_PROP": 0.0,
+        "MAX_NOISE_PROP": 1.0,
+        "INC_NOISE_PROP": 0.02,
+        "NUM_REPEATS": 1
     }
 }

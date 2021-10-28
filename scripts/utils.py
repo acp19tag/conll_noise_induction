@@ -1,9 +1,7 @@
 #!/usr/bin/python
 import numpy as np
 import tensorflow as tf
-# import matplotlib.cm as cm
 import random
-# from matplotlib import pyplot as plt 
 from keras.models import Sequential
 from keras.layers import Activation, Dropout, Flatten, Dense, Conv1D
 from keras.layers.recurrent import GRU
@@ -280,3 +278,4 @@ def tokenize_and_preserve_labels(sentence, text_labels, tokenizer):
         labels.extend([label] * n_subwords)
 
     return tokenized_sentence, labels
+
