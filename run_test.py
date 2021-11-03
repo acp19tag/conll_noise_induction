@@ -16,11 +16,11 @@ NI = NoiseInductor(config)
 #     output_dir='output/random_error.csv'
 # )
 
-NI.run_noise_induction_model(
-    noise_type='systematic',
-    output_dir='output/systematic_error.csv'
-)
-
-# NI.run_denoise_induction_model(
-#     output_dir='output/denoise.csv'
+# NI.run_noise_induction_model(
+#     noise_type='systematic',
+#     output_dir='output/systematic_error.csv'
 # )
+
+NI.run_denoise_induction_model(
+    output_dir='output/denoise.csv'
+)
