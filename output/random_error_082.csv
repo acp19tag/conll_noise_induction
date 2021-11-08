@@ -1,2 +1,0 @@
-noise_prop,worker_avg_f1,worker_std_f1,test_accuracy,model_precision,model_recall,model_f1
-0.82,0.18431721939610393,0.046840681165450995,0.8679179159690044,24.87,25.49,25.18

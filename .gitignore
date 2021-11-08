@@ -6,3 +6,7 @@ data/glove.6B/*
 
 # Model Weights
 *.h5
+
+# Misc generated
+r_test.txt
+conlleval.pl
